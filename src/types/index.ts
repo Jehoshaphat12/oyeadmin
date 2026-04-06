@@ -1,8 +1,7 @@
-// ─── Matches @types/index.ts in OyeRide exactly ──────────────────────────────
+// ─── Matches @types/index.ts in OyeRide — plus 'admin' userType ──────────────
 
 export type VehicleType = 'motor' | 'delivery' | 'bicycle_delivery';
 
-// All statuses the app can write (arriving/arrived are used in the driver flow)
 export type RideStatus =
   | 'requesting'
   | 'accepted'
@@ -18,11 +17,11 @@ export interface User {
   name: string;
   phone: string;
   photoUrl?: string;
-  userType: 'passenger' | 'driver';
+  // 'admin' added — dashboard checks this to gate access
+  userType: 'passenger' | 'driver' | 'admin';
   rating: number;
   avatar?: string;
   createdAt: Date;
-  /** Only on passenger docs — optional */
   totalRides?: number;
   fcmToken: string | null;
   pushToken: string | null;
@@ -60,28 +59,17 @@ export interface Driver {
   };
   photoUrl: string;
   rating: number;
-  /** Firestore field is totalTrips — matches OyeRide @types */
   totalTrips: number;
   geohash: string;
   lastUpdated: Date;
-  /** Computed at query time by RideService.findNearbyDrivers, not stored */
   distance: number;
   isVerified: boolean;
   fcmToken: string;
-  /**
-   * NOTE: The OyeRide app computes earnings client-side from completed rides
-   * and does NOT write them back to the driver document. This field will be
-   * absent / all-zeros for most drivers until the app is updated to persist it.
-   */
   earnings: Earnings;
   documents: unknown;
   createdAt: Date;
 }
 
-/**
- * Lightweight driver info written to a ride when it is accepted.
- * The app writes `driverInfo` (not a full `driver` doc embed) via RideService.acceptRide.
- */
 export interface DriverInfo {
   name: string;
   phone: string;
@@ -95,20 +83,13 @@ export interface Ride {
   passengerId: string;
   passengerName: string;
   passengerPhone: string;
-  /** Written as `passengerPhoto` in RideService.requestRide */
   passengerPhoto?: string;
   passengerRating?: number | null;
 
   driverId?: string;
-  /**
-   * Written by RideService.acceptRide as `driverInfo` — NOT a full Driver embed.
-   * Use this to show the driver's name/phone/vehicle on ride rows.
-   */
   driverInfo?: DriverInfo;
-  /** Never populated from Firestore — use driverInfo instead */
   driver?: Driver;
 
-  /** Driver's rating of the passenger (written by driver on completion) */
   driverRating: number;
   driverFeedback: string;
   driverFeedbackTags: string[];
@@ -136,20 +117,16 @@ export interface Ride {
   duration: number;
   totalFare: number;
 
-  /** Firestore timestamp — the app also stores `createdAt` via serverTimestamp */
   requestedAt: Date;
-  /** Firestore: serverTimestamp() set by FirestoreService.createRide */
   createdAt?: Date;
   acceptedAt?: Date;
   startedAt?: Date;
   completedAt?: Date;
 
-  /** Passenger's rating of the driver */
   userRating?: number;
   userFeedback?: string;
   feedbackTags?: string[];
 
-  // Extra fields written by RideService.requestRide
   paymentMethod?: string;
   surgeMultiplier?: number;
   surgeReason?: string;
@@ -158,4 +135,10 @@ export interface Ride {
   cancelledAt?: Date | null;
 }
 
-export type Page = 'dashboard' | 'passengers' | 'drivers' | 'history' | 'recent' | 'incoming';
+export type Page =
+  | 'dashboard'
+  | 'passengers'
+  | 'drivers'
+  | 'history'
+  | 'recent'
+  | 'incoming';
