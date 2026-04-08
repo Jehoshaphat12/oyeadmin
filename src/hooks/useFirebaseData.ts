@@ -440,3 +440,87 @@ export function useWeeklyStats() {
 
   return { days, loading };
 }
+
+// ─── Mutations ────────────────────────────────────────────────────────────────
+import {
+  doc,
+  updateDoc,
+  serverTimestamp as firestoreServerTimestamp,
+  getDoc,
+} from 'firebase/firestore';
+import { ref as dbRef, set as dbSet, serverTimestamp as rtdbServerTimestamp } from 'firebase/database';
+
+/**
+ * Assign a driver to a requesting ride.
+ * Mirrors what RideService.acceptRide does in the OyeRide app.
+ */
+export async function assignDriverToRide(
+  rideId: string,
+  driver: Driver
+): Promise<void> {
+  const rideRef = doc(firestore, 'rides', rideId);
+  const driverRef = doc(firestore, 'drivers', driver.id);
+
+  // Update ride
+  await updateDoc(rideRef, {
+    status: 'accepted',
+    driverId: driver.id,
+    driverInfo: {
+      name: driver.name,
+      phone: driver.phone,
+      photoUrl: driver.photoUrl || null,
+      rating: driver.rating,
+      vehicle: driver.vehicle,
+    },
+    acceptedAt: firestoreServerTimestamp(),
+    updatedAt: firestoreServerTimestamp(),
+  });
+
+  // Mark driver unavailable
+  await updateDoc(driverRef, {
+    isAvailable: false,
+    currentRideId: rideId,
+    updatedAt: firestoreServerTimestamp(),
+  });
+
+  // Mirror to Realtime DB so the app's live listeners see it
+  await dbSet(dbRef(database, `ride_updates/${rideId}`), {
+    status: 'accepted',
+    driverId: driver.id,
+    updatedAt: rtdbServerTimestamp(),
+  });
+}
+
+/**
+ * Cancel a ride request (admin action).
+ */
+export async function cancelRide(rideId: string): Promise<void> {
+  const rideRef = doc(firestore, 'rides', rideId);
+  const snap = await getDoc(rideRef);
+  const data = snap.data();
+
+  await updateDoc(rideRef, {
+    status: 'cancelled',
+    cancelledBy: 'admin',
+    cancelledAt: firestoreServerTimestamp(),
+    cancellationReason: 'Cancelled by admin',
+    updatedAt: firestoreServerTimestamp(),
+  });
+
+  // If a driver was assigned, free them up
+  if (data?.driverId) {
+    const driverRef = doc(firestore, 'drivers', data.driverId);
+    await updateDoc(driverRef, {
+      isAvailable: true,
+      currentRideId: null,
+      updatedAt: firestoreServerTimestamp(),
+    });
+  }
+
+  // Mirror to Realtime DB
+  await dbSet(dbRef(database, `ride_updates/${rideId}`), {
+    status: 'cancelled',
+    driverId: data?.driverId || null,
+    updatedAt: rtdbServerTimestamp(),
+  });
+}

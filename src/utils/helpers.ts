@@ -42,3 +42,10 @@ export const parseFare = (raw: unknown): number => {
   if (typeof raw === 'string') return parseFloat(raw) || 0;
   return 0;
 };
+
+export const formatAddress = (address: any): string => {
+  if (!address) return '—';
+  if (Array.isArray(address)) return address.filter(Boolean).join(', ');
+  const str = String(address);
+  return str.replace(/\s*\n\s*/g, ' ').trim() || '—';
+};
