@@ -1,16 +1,31 @@
 import React from 'react';
-import { FaBars, FaBell } from 'react-icons/fa';
+import { FaBars } from 'react-icons/fa';
 import { useAuth } from '../../contexts/AuthContext';
+import { NotificationBell } from '../notifications/NotificationBell';
+import type { AdminNotification } from '../../services/notificationService';
 
 interface HeaderProps {
   title: string;
   onMenuClick: () => void;
+  // Notification props — passed down from Layout
+  notifications: AdminNotification[];
+  unreadCount: number;
+  onMarkAllRead: () => void;
+  onMarkRead: (id: string) => void;
+  onNotificationAction: (type: string, meta?: { rideId?: string; driverId?: string }) => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
+export const Header: React.FC<HeaderProps> = ({
+  title,
+  onMenuClick,
+  notifications,
+  unreadCount,
+  onMarkAllRead,
+  onMarkRead,
+  onNotificationAction,
+}) => {
   const { adminUser } = useAuth();
 
-  // Initials for the avatar pill in the top-right
   const initials = adminUser?.name
     ? adminUser.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'AD';
@@ -36,9 +51,15 @@ export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
         <button
           onClick={onMenuClick}
           style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            padding: 6, borderRadius: 7, color: '#6B7280',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 6,
+            borderRadius: 7,
+            color: '#6B7280',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           <FaBars size={18} />
@@ -51,48 +72,53 @@ export const Header: React.FC<HeaderProps> = ({ title, onMenuClick }) => {
         {/* Live indicator */}
         <div
           style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            fontSize: 11, color: '#6B7280',
-            background: '#F3F4F6', borderRadius: 20, padding: '4px 10px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 5,
+            fontSize: 11,
+            color: '#6B7280',
+            background: '#F3F4F6',
+            borderRadius: 20,
+            padding: '4px 10px',
           }}
         >
           <span
             style={{
-              width: 7, height: 7, borderRadius: '50%',
-              background: '#10B981', display: 'inline-block',
+              width: 7,
+              height: 7,
+              borderRadius: '50%',
+              background: '#10B981',
+              display: 'inline-block',
             }}
           />
           Live
         </div>
 
-        {/* Notification bell */}
-        <div
-          style={{
-            width: 34, height: 34, borderRadius: '50%',
-            background: '#F3F4F6',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', position: 'relative',
-          }}
-        >
-          <FaBell size={16} color="#6B7280" />
-          <span
-            style={{
-              position: 'absolute', top: 6, right: 6,
-              width: 8, height: 8, borderRadius: '50%',
-              background: '#EF4444', border: '2px solid #fff',
-            }}
-          />
-        </div>
+        {/* Real notification bell */}
+        <NotificationBell
+          unreadCount={unreadCount}
+          notifications={notifications}
+          onMarkAllRead={onMarkAllRead}
+          onMarkRead={onMarkRead}
+          onAction={onNotificationAction}
+        />
 
         {/* Admin avatar */}
         <div
           title={adminUser?.name ?? 'Admin'}
           style={{
-            width: 32, height: 32, borderRadius: '50%',
+            width: 32,
+            height: 32,
+            borderRadius: '50%',
             background: '#111827',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 11, fontWeight: 700, color: '#F59E0B',
-            cursor: 'default', flexShrink: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 11,
+            fontWeight: 700,
+            color: '#F59E0B',
+            cursor: 'default',
+            flexShrink: 0,
           }}
         >
           {initials}

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { NotificationToastContainer } from '../notifications/NotificationToast';
+import { useAdminNotifications } from '../../hooks/useAdminNotifications';
 import type { Page } from '../../types';
 
 interface LayoutProps {
@@ -19,13 +21,29 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
     const mq = window.matchMedia('(min-width: 769px)');
     const update = (e: MediaQueryListEvent | MediaQueryList) => {
       setIsDesktop(e.matches);
-      setSidebarOpen(e.matches); // auto-open on desktop
+      setSidebarOpen(e.matches);
     };
     update(mq);
     mq.addEventListener('change', update);
     return () => mq.removeEventListener('change', update);
   }, []);
 
+  // ── Notification hook ──────────────────────────────────────────────────────
+  const {
+    notifications,
+    unreadCount,
+    toasts,
+    dismissToast,
+    markAsRead,
+    markAllAsRead,
+    handleNotificationAction,
+  } = useAdminNotifications();
+
+  const handleNotifAction = (type: string, meta?: { rideId?: string; driverId?: string }) => {
+    handleNotificationAction(type, meta, onNavigate);
+  };
+
+  // ── Page titles ────────────────────────────────────────────────────────────
   const pageTitles: Record<Page, string> = {
     dashboard:  'Dashboard',
     incoming:   'Incoming Rides',
@@ -38,9 +56,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
   const closeSidebar = () => { if (!isDesktop) setSidebarOpen(false); };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#F3F4F6', fontFamily: "'Segoe UI', system-ui, sans-serif", position: 'relative' }}>
-
-      {/* Mobile overlay — only visible when sidebar is open on mobile */}
+    <div
+      style={{
+        display: 'flex',
+        minHeight: '100vh',
+        background: '#F3F4F6',
+        fontFamily: "'Segoe UI', system-ui, sans-serif",
+        position: 'relative',
+      }}
+    >
+      {/* Mobile overlay */}
       {sidebarOpen && !isDesktop && (
         <div
           onClick={closeSidebar}
@@ -54,14 +79,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
         isOpen={sidebarOpen}
       />
 
-      {/* Main content — pushed right by sidebar width on desktop only */}
+      {/* Main content */}
       <div
         style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
           minWidth: 0,
-          // On desktop the sidebar is always visible and takes 220px
           marginLeft: isDesktop ? SIDEBAR_W : 0,
           transition: 'margin-left 0.28s cubic-bezier(0.4,0,0.2,1)',
         }}
@@ -69,23 +93,31 @@ export const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigat
         <Header
           title={pageTitles[currentPage]}
           onMenuClick={() => setSidebarOpen((v) => !v)}
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAllRead={markAllAsRead}
+          onMarkRead={markAsRead}
+          onNotificationAction={handleNotifAction}
         />
+
+        {/* Toast container — sits in top-right corner, above content */}
+        <NotificationToastContainer
+          toasts={toasts}
+          onDismiss={dismissToast}
+          onAction={handleNotifAction}
+        />
+
         <div
           style={{
             flex: 1,
             padding: '16px',
             overflowY: 'auto',
-            // Prevent any child from breaking the page width on mobile
             overflowX: 'hidden',
             boxSizing: 'border-box',
-            // A bit more breathing room on wider screens
             maxWidth: '100%',
           }}
         >
-          {/* Inner wrapper caps width on very wide displays */}
-          <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-            {children}
-          </div>
+          <div style={{ maxWidth: 1280, margin: '0 auto' }}>{children}</div>
         </div>
       </div>
     </div>
