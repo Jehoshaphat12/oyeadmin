@@ -4,8 +4,6 @@ import {
   FaCar,
   FaTimes,
   FaCheckCircle,
-  FaCommentAlt,
-  FaStar,
   FaUserPlus,
   FaWifi,
 } from 'react-icons/fa';
